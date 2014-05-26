@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="phonegap.js"></script>
+<script src="vibration.js"></script>
+<script src="SocialSharing.js"></script>
+<script src="childbrowser.js"></script>
+	
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap-modal.js"></script>
+<script src="js/questions.js"></script>
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link href="css/font-awesome.css" rel="stylesheet">
+<link rel="stylesheet" href="css/shell.css">
+<link href='css/audiowide.css' rel='stylesheet' type='text/css'>
+<link href='css/sue-ellen-francisco.css' rel='stylesheet' type='text/css'>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<script type="text/javascript">
+
+window.onerror = function(error) {
+    // alert(error);
+	console.log("Error: "+error);
+};
+
+$(document).ready(function(){
+
+	var startTimer			= 1, 			// Game start countdown
+		score				= 0,			// Holds the final score	
+		newGameCounter		= 0,
+		highScore			= localStorage.getItem("shb_it_hs"),
+		currentLevel		= localStorage.getItem("shb_it_lvl"),
+		gameInProgress  	= false,
+		questionsAnswered	= new Array(),
+		currentQuestion		= "",
+		adCounter			= 0,
+		network				= false;		// Indicates if the device has network or not.
+		
+		
+	
+
+	
+	
+	//reload high score
+	if (highScore !== null) {
+		$('#high_score').html(highScore);
+	}
+	if(currentLevel === null)
+		currentLevel = 0;
+	
+	// INIT network status
+	if(navigator.connection != "undefined"){
+		//var networkState = navigator.connection.type;
+		//if(networkState != "Connection.NONE"){
+		//	network = true;
+		//}
+	}
+	document.addEventListener("offline", onOffline, false);
+
+	function onOffline() {
+		// Handle the offline event
+		network = false;
+	}
+
+	document.addEventListener("online", onOnline, false);
+
+	function onOnline() {
+		// Handle the online event
+		network = true;
+	}
+
+
+	
+	function gameOver(){
+	
+		
+		gameScore 		= calcScore();
+		gameInProgress 	= false;
+		
+		if(gameScore < 0)
+			gameScore = 0;
+		
+		if (highScore === null) {
+			highScore = gameScore;
+			$("<span id='new_high_score'>New high score!</span>").insertAfter('.score');
+		}
+		
+		
+		if(gameScore > highScore){
+			$("<span id='new_high_score'>New high score!</span>").insertAfter('.score');
+			highScore = gameScore;
+		}
+		localStorage.setItem("shb_it_hs",highScore);
+		$('#high_score').html(highScore);		
+		$('#game_end .score').html(gameScore);
+		
+		
+		$('#game_end').modal("show");
+		endGame();
+	
+	}
+	
+	function calcScore(){
+	
+		return score;
+	
+	}
+	
+
+	
+
+	var newGameEvent = function(){
+	
+		newGameCounter++;
+		$('#game_end').modal("hide");
+		if(gameInProgress)
+			endGame();
+			
+		var count = startTimer;
+	    $('html, body').animate({
+			scrollTop: $("#shb-start-countdown").offset().top
+		}, 1000);
+		$('#game_container').css('visibility', 'visible');
+		$('#shb-start-countdown').show();
+		var gameStartCountdown = setInterval(function() {
+
+			
+			if (count !== 0) {
+			  $('#shb-start-countdown').html(count--);
+			} else {
+			  clearInterval(gameStartCountdown);
+			  $('#shb-start-countdown').fadeOut('fast',function(){
+				
+				gameInProgress = true;
+				startGame();
+			  });
+			  
+			}
+		}, 1000);		
+	
+	
+	};
+	
+	$('.new_game').click(newGameEvent);
+
+	function getRandomInt (min, max) {
+		return Math.floor(Math.random() * (max - min + 1)) + min;
+	}
+
+	function getQuestion(){
+	
+		currentQuestion = questions[currentLevel];
+		//currentQuestion = questions[questions.length-1];
+		return currentQuestion;
+	}
+
+
+	function startGame(){
+
+		score		= 0;
+		var question 	= getQuestion();
+		$('#question').html(question.question);
+		$('#game_input').prop('readonly',false);		
+		$('#quotes-list-container').hide();
+		$('#new_high_score').remove();
+	}
+	
+	function notify(html){
+		var uniq = 'ff' + (new Date()).getTime();
+		$('#flying_stuff').append("<span class='flying_stuff' id='"+uniq+"'>"+html+"</span>");
+		$("#"+uniq).animate({
+							bottom : $('#flying_stuff').offset().top
+							},2000,'linear', function() {
+								$("#"+uniq).slideDown().remove();
+							});
+
+	
+	}	
+	
+	
+	function gameWon(){
+	
+		//TODO: logic for game won.
+		
+		gameScore 		= calcScore();
+		gameInProgress 	= false;
+		
+		if(gameScore < 0)
+			gameScore = 0;
+		
+		if (highScore === null) {
+			highScore = gameScore;
+			$("<span id='new_high_score'>New high score!</span>").insertAfter('.score');
+		}
+		
+		
+		if(gameScore > highScore){
+			$("<span id='new_high_score'>New high score!</span>").insertAfter('.score');
+			highScore = gameScore;
+		}
+		localStorage.setItem("shb_it_hs",highScore);
+		$('#high_score').html(highScore);
+		$('#game_end .score').html(gameScore);
+		$('#game_end .modal-body').html("You Have Won The Game!!!");
+		
+		$('#game_end').modal("show");
+		endGame();
+	
+	}
+	
+	
+	$('#submit_answer').click(function(){
+		
+		//console.log($('#game_input').val().toLowerCase());
+		//console.log(currentQuestion.answers);
+		//console.log(currentQuestion.answers.indexOf($('#game_input').val().toLowerCase()) );
+		if(currentQuestion.answers.indexOf($('#game_input').val().toLowerCase().replace(/\s+/g, '')) != -1){
+		
+				questionsAnswered.push(currentQuestion.question);
+				score++;
+				currentLevel++;
+				if(currentLevel > questions.length){
+					
+					gameWon();
+					return;
+				
+				}
+				localStorage.setItem("shb_it_lvl",currentLevel);
+				
+				var question 	= getQuestion();
+				$('#question').html(question.question);
+				$('#game_input').val('');
+				//notify("<span style='color:green;'>True!</span>");
+				
+		}
+		else{
+			gameOver();
+		}
+	
+	
+	});
+	
+	
+	
+	function endGame(){
+	
+		gameInProgress = false;
+		$('#game_container').css('visibility', 'hidden');
+
+		$('#shb-start-countdown').empty();
+		$('#game_input').val('');
+		$('#game_input').prop('readonly',true);
+		$('#kareoke').empty();
+		resetTime(); 
+		if(adCounter >= 3 || calcScore() >= 900){
+			// console.log("Show Ad");
+			if(typeof window.plugins != "undefined"){	
+				if(typeof window.plugins.ChildBrowser != "undefined" && network == true)	
+					window.plugins.ChildBrowser.showWebPage('http://ad.leadboltads.net/show_app_wall?section_id=958540713',
+											{ 
+												showLocationBar		:	false,
+												showAddress			:	false,
+												showNavigationBar	:	false
+												});		//$('#shb-start-countdown').show();
+				adCounter = 0;
+			}
+		} else {
+			adCounter++;
+		}
+		
+	}
+	
+
+
+	$('#fb_share_score').click(function(){
+		if(typeof window.plugins != "undefined")	
+			if(typeof window.plugins.socialsharing != "undefined")
+				window.plugins.socialsharing.shareViaFacebook(
+																'I Scored X on Auto-currect!!', // Message
+																null,	//Subject
+																null,	//Image
+																null,	//Link
+																console.log('share ok'),
+																function(errormsg){
+																	alert(errormsg)
+																}
+															);
+
+
+		
+	
+	});
+	
+
+	
+});
+</script>
+</head>
+
+<body>
+<a href="#faq_modal" data-toggle="modal" role="button" id="faq-button">
+<i class="fa fa-question fa-2x"></i> 
+</a>	
+<span id="high-score-container">High Score: <span id="high_score">0</span></span>
+<div class="container-fluid">
+	<div class="row">
+		<div class="text-center shb-pannel">
+			<h3>Impossible Trivia</h3>
+			<p class="shb-desc">The object of the game is to answer the given questions. There's no options, you need to scavange the internet
+			and find the answer. If you fail to answer, you lose. Simple you think, Hey? Search the web as much as you like, we've been expecting that.
+	
+		</div>
+	</div>
+	<div class="row">
+		<div class="text-center shb-pannel">
+		
+			<p style="margin-top:3em;">
+			  <button type="button" class="btn btn-success new_game" id="main_new_game">New Game</button>
+			</p>
+			<div id="shb-start-countdown"></div>
+			<div id="game_container">
+				<div id="question">
+				
+				</div>
+			<div class="input-group">
+			 <input type="text" id="game_input" class="form-control" />
+			  <span class="input-group-btn">
+				<button class="btn btn-success" type="button" id="submit_answer">Continue</button>
+			  </span>
+			</div>
+			<span id="flying_stuff"></span>
+				
+		
+			</div>
+			
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" role="dialog" id="faq_modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#428bca;color:white;">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">FAQ</h4>
+      </div>
+      <div class="modal-body">
+        <p class="shb-faq-q">How to play?</p>
+		<p class="shb-faq-a">Hit the "New Game" button, when the countdown is finished, simply write the answers to the questions that appear 
+		on your screen.</p>	  
+        <p class="shb-faq-q">Why is there no leaderboard?</p>
+		<p class="shb-faq-a">Well, we find it frustrating when you work really hard in an arcade game to then find out some guy did
+		a million times better.</p>
+
+        <p class="shb-faq-q">The questions really are impossible!</p>
+		<p class="shb-faq-a">Well technically, they arn't. You see, the problem with trivia games is that today, in the age of information, they are easy
+		since you just search it on the web, and you have the answer. We decided to take that fact, and make a game in which you will have to search
+		really hard, and will be able to found it. We made sure that all the answers exists somewhere on the web, in one form or another. basically, you're
+competing against the developers of this game in who can search better :)		
+		</p>
+		
+		<p class="shb-faq-q">I answered the right question, and I lost!</p>
+		<p class="shb-faq-a">try using a different way to answer the same question, and keep it as short as possible, for example if the answer is "42",
+		simply write it and not write "forty two", if that still doesn't work after several tries, then you're probably wrong.
+		</p>		
+		<p class="shb-faq-q">How can I contact you?</p>
+		<p class="shb-faq-a">Our telepathy service is temporarily down for maintenance, so in the mean time you can mail us at 
+			<a href="mailto:contact@shibby.co.il">
+				contact@shibby.co.il
+			</a>
+		</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+
+
+<div class="modal fade" role="dialog" id="game_end">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#428bca;color:white;">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Game over</h4>
+      </div>
+      <div class="modal-body">
+	  <p class="score-label">Your score is:</p>
+      <div class="score"></div>
+	  <br><br>
+
+      </div>
+      <div class="modal-footer" style="text-align:center;">
+			<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+			<button type="button" class="btn btn-success new_game" >New Game</button>
+			<a id="fb_share_score" >
+				<i class="fa fa-facebook-square fa-2x" style="vertical-align: bottom;margin-bottom: -0.07em;font-size: 2.8em;"></i>
+			</a>
+	  </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+
+
+
+</body>
+</html>
